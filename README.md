@@ -27,7 +27,7 @@ protoc -Iproto --grpc-httpgw_out=logtostderr=true:./goproto ./proto/imgate.proto
 # 对应生成 xxx.pb.httpgw.go
 ```
 
-## Schema
+## Schema例子
 
 ```protobuf
 // 后端服务 authorize.proto
@@ -161,11 +161,11 @@ func (p *Manager) httpCallDoneHandler(meth string, reply proto.Message, w http.R
 ## 特点
 
 ```
-1. 客户端不用关心后端服务有哪些，只需知道网关地址。由网关根据包头信息自动路由到后端服务并返回对应数据。
-2. 同时支持protobuf和json两种协议格式
-3. 对比grpc-ecosystem/grpc-gateway
-3.1 ecosystem需要为每个后端服务都注册一个网关地址和端口，客户端需要关心对应服务的网关和端口。
-3.2 ecosystem只支持http的短连接访问，不支持双向数据发送。
+1. 目的: 将rustful接口转换成grpc访问
+2. 客户端不用关心后端服务有哪些，只需知道网关(代理)地址。由网关根据rustful路径自动路由到后端服务并返回对应数据。
+3. 同时支持protobuf和json两种协议格式
+4. 不支持服务端主动下发消息给客户端
+5. 支持路由转发给不同的后端服务
+6. grpc转发支持后端服务发现和均衡负载
 ```
 
-![战旗im架构](E:\GoSpaceMod\protoc-gen-grpc-httpgw\战旗im架构.jpg)
