@@ -7,6 +7,8 @@
 ```shell
 # 生成文件
 go build -o $GOPATH/bin/protoc-gen-grpc-httpgw
+// or
+go install
 ```
 
 ### 插件参数
