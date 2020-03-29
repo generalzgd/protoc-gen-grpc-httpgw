@@ -1,6 +1,10 @@
 package gengateway
 
 import (
+	"path/filepath"
+	"strings"
+	"testing"
+
 	"github.com/golang/protobuf/proto"
 	protodescriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 
@@ -82,7 +86,7 @@ func newExampleFileDescriptorWithGoPkg(gp *descriptor.GoPackage) *descriptor.Fil
 	}
 }
 
-/*func TestGenerateServiceWithoutBindings(t *testing.T) {
+func TestGenerateServiceWithoutBindings(t *testing.T) {
 	file := newExampleFileDescriptor()
 	g := &generator{}
 	got, err := g.generate(crossLinkFixture(file))
@@ -93,80 +97,80 @@ func newExampleFileDescriptorWithGoPkg(gp *descriptor.GoPackage) *descriptor.Fil
 	if notwanted := `"github.com/golang/protobuf/ptypes/empty"`; strings.Contains(got, notwanted) {
 		t.Errorf("generate(%#v) = %s; does not want to contain %s", file, got, notwanted)
 	}
-}*/
+}
 
-//func TestGenerateOutputPath(t *testing.T) {
-//	cases := []struct {
-//		file     *descriptor.File
-//		pathType pathType
-//		expected string
-//	}{
-//		{
-//			file: newExampleFileDescriptorWithGoPkg(
-//				&descriptor.GoPackage{
-//					Path: "example.com/path/to/example",
-//					Name: "example_pb",
-//				},
-//			),
-//			expected: "example.com/path/to/example",
-//		},
-//		{
-//			file: newExampleFileDescriptorWithGoPkg(
-//				&descriptor.GoPackage{
-//					Path: "example",
-//					Name: "example_pb",
-//				},
-//			),
-//			expected: "example",
-//		},
-//		{
-//			file: newExampleFileDescriptorWithGoPkg(
-//				&descriptor.GoPackage{
-//					Path: "example.com/path/to/example",
-//					Name: "example_pb",
-//				},
-//			),
-//			pathType: pathTypeSourceRelative,
-//			expected: ".",
-//		},
-//		{
-//			file: newExampleFileDescriptorWithGoPkg(
-//				&descriptor.GoPackage{
-//					Path: "example",
-//					Name: "example_pb",
-//				},
-//			),
-//			pathType: pathTypeSourceRelative,
-//			expected: ".",
-//		},
-//	}
-//
-//	for _, c := range cases {
-//		g := &generator{pathType: c.pathType}
-//
-//		file := c.file
-//		gots, err := g.Generate([]*descriptor.File{crossLinkFixture(file)})
-//		if err != nil {
-//			t.Errorf("Generate(%#v) failed with %v; wants success", file, err)
-//			return
-//		}
-//
-//		if len(gots) != 1 {
-//			t.Errorf("Generate(%#v) failed; expects on result got %d", file, len(gots))
-//			return
-//		}
-//
-//		got := gots[0]
-//		if got.Name == nil {
-//			t.Errorf("Generate(%#v) failed; expects non-nil Name(%v)", file, got.Name)
-//			return
-//		}
-//
-//		gotPath := filepath.Dir(*got.Name)
-//		expectedPath := c.expected
-//		if gotPath != expectedPath {
-//			t.Errorf("Generate(%#v) failed; got path: %s expected path: %s", file, gotPath, expectedPath)
-//			return
-//		}
-//	}
-//}
+func TestGenerateOutputPath(t *testing.T) {
+	cases := []struct {
+		file     *descriptor.File
+		pathType pathType
+		expected string
+	}{
+		{
+			file: newExampleFileDescriptorWithGoPkg(
+				&descriptor.GoPackage{
+					Path: "example.com/path/to/example",
+					Name: "example_pb",
+				},
+			),
+			expected: "example.com/path/to/example",
+		},
+		{
+			file: newExampleFileDescriptorWithGoPkg(
+				&descriptor.GoPackage{
+					Path: "example",
+					Name: "example_pb",
+				},
+			),
+			expected: "example",
+		},
+		{
+			file: newExampleFileDescriptorWithGoPkg(
+				&descriptor.GoPackage{
+					Path: "example.com/path/to/example",
+					Name: "example_pb",
+				},
+			),
+			pathType: pathTypeSourceRelative,
+			expected: ".",
+		},
+		{
+			file: newExampleFileDescriptorWithGoPkg(
+				&descriptor.GoPackage{
+					Path: "example",
+					Name: "example_pb",
+				},
+			),
+			pathType: pathTypeSourceRelative,
+			expected: ".",
+		},
+	}
+
+	for _, c := range cases {
+		g := &generator{pathType: c.pathType}
+
+		file := c.file
+		gots, err := g.Generate([]*descriptor.File{crossLinkFixture(file)})
+		if err != nil {
+			t.Errorf("Generate(%#v) failed with %v; wants success", file, err)
+			return
+		}
+
+		if len(gots) != 1 {
+			t.Errorf("Generate(%#v) failed; expects on result got %d", file, len(gots))
+			return
+		}
+
+		got := gots[0]
+		if got.Name == nil {
+			t.Errorf("Generate(%#v) failed; expects non-nil Name(%v)", file, got.Name)
+			return
+		}
+
+		gotPath := filepath.Dir(*got.Name)
+		expectedPath := c.expected
+		if gotPath != expectedPath {
+			t.Errorf("Generate(%#v) failed; got path: %s expected path: %s", file, gotPath, expectedPath)
+			return
+		}
+	}
+}

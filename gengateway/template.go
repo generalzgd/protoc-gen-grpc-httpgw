@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	generator2 "github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/grpc-ecosystem/grpc-gateway/utilities"
+	`github.com/toolkits/slice`
 
 	"github.com/generalzgd/protoc-gen-grpc-httpgw/descriptor"
 )
@@ -19,6 +20,7 @@ type param struct {
 	UseRequestContext  bool
 	RegisterFuncSuffix string
 	AllowPatchFeature  bool
+	AdditionImports    []string
 }
 
 type binding struct {
@@ -142,9 +144,19 @@ type trailerParams struct {
 
 func applyTemplate(p param, reg *descriptor.Registry) (string, error) {
 	w := bytes.NewBuffer(nil)
+	var addiImport []string
+	for _, svc := range p.Services {
+		for _, im := range svc.ParseAdditionalImport() {
+			if !slice.ContainsString(addiImport, im) {
+				addiImport = append(addiImport, im)
+			}
+		}
+	}
+	p.AdditionImports = addiImport
 	if err := headerTemplate.Execute(w, p); err != nil {
 		return "", err
 	}
+
 	var targetServices []*descriptor.Service
 
 	for _, msg := range p.Messages {
@@ -155,6 +167,9 @@ func applyTemplate(p param, reg *descriptor.Registry) (string, error) {
 		var methodWithBindingsSeen bool
 		svcName := generator2.CamelCase(*svc.Name)
 		svc.Name = &svcName
+
+
+
 		for _, meth := range svc.Methods {
 			glog.V(2).Infof("Processing %s.%s", svc.GetName(), meth.GetName())
 			methName := generator2.CamelCase(*meth.Name)
@@ -177,6 +192,8 @@ func applyTemplate(p param, reg *descriptor.Registry) (string, error) {
 	if len(targetServices) == 0 {
 		return "", errNoTargetService
 	}
+
+
 
 	assumeColonVerb := true
 	if reg != nil {
@@ -210,6 +227,9 @@ import (
 
 	grpcpool "github.com/processout/grpc-go-pool"
 	{{range $i := .Imports}}{{if not $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
+
+	{{range $i := .AdditionImports}}
+		"{{$i}}"{{end}}
 )
 
 var _ codes.Code
@@ -231,9 +251,9 @@ var _ = utilities.NewDoubleArray
 
 	_ = template.Must(handlerTemplate.New("request-func-signature").Parse(strings.Replace(`
 {{if .Method.GetServerStreaming}}
-func request_{{.Method.Service.Name}}_{{.Method.GetTargetSvrName}}_{{.Method.GetName}}_{{.Index}}(ctx context.Context, marshaler runtime.Marshaler, client {{.Method.GetTargetSvrName}}Client, req *http.Request, pathParams map[string]string) ({{.Method.GetTargetSvrName}}_{{.Method.GetName}}Client, runtime.ServerMetadata, error)
+func request_{{.Method.Service.Name}}_{{.Method.GetTargetSvrName}}_{{.Method.GetName}}_{{.Index}}(ctx context.Context, marshaler runtime.Marshaler, client {{.Method.GetTargetSvrPackage}}{{.Method.GetTargetSvrName}}Client, req *http.Request, pathParams map[string]string) ({{.Method.GetTargetSvrName}}_{{.Method.GetName}}Client, runtime.ServerMetadata, error)
 {{else}}
-func request_{{.Method.Service.Name}}_{{.Method.GetTargetSvrName}}_{{.Method.GetName}}_{{.Index}}(ctx context.Context, marshaler runtime.Marshaler, client {{.Method.GetTargetSvrName}}Client, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error)
+func request_{{.Method.Service.Name}}_{{.Method.GetTargetSvrName}}_{{.Method.GetName}}_{{.Index}}(ctx context.Context, marshaler runtime.Marshaler, client {{.Method.GetTargetSvrPackage}}{{.Method.GetTargetSvrName}}Client, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error)
 {{end}}`, "\n", "", -1)))
 
 	_ = template.Must(handlerTemplate.New("client-streaming-request-func").Parse(`
@@ -513,7 +533,7 @@ func Register{{$svc.GetName}}{{$.RegisterFuncSuffix}}Client(
 		}
 		closeFunc()
 
-		client := New{{$m.GetTargetSvrName}}Client(conn)
+		client := {{$m.GetTargetSvrPackage}}New{{$m.GetTargetSvrName}}Client(conn)
 
 		resp, md, err := request_{{$m.Service.Name}}_{{$m.GetTargetSvrName}}_{{$m.GetName}}_{{$b.Index}}(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)

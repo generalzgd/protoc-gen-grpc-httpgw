@@ -43,6 +43,7 @@ var (
 	file                       = flag.String("file", "-", "where to load data from")
 	//file               = flag.String("file", "./test_in.bts", "where to load data from")
 	debug = flag.Bool("debug", false, "")
+	definePrefix       = flag.String("define_prefix", "", "var define prefix")
 )
 
 // Variables set by goreleaser at build time

@@ -2,6 +2,7 @@ package descriptor
 
 import (
 	"fmt"
+	`strconv`
 	"strings"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -154,6 +155,32 @@ type Service struct {
 	Methods []*Method
 }
 
+func (s *Service) ParseAdditionalImport() []string {
+	commentLines := strings.Split(s.Comment, "\n")
+	for i, it := range commentLines {
+		commentLines[i] = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(it), "//"))
+	}
+
+	var list []string
+	for _, line := range commentLines {
+		if strings.Contains(line, TagImport) {
+			tar := strings.TrimSpace(strings.TrimPrefix(line, TagImport))
+			tar = strings.TrimSpace(strings.Split(tar, " ")[0])
+			if len(tar) > 0 {
+				tmp := strings.SplitN(tar, ":", 2)
+				if len(tmp) < 2{
+					continue
+				}
+				flag, _ := strconv.Atoi(tmp[1])
+				if flag&2 > 0 {
+					list = append(list, tmp[0])
+				}
+			}
+		}
+	}
+	return list
+}
+
 // FQSN returns the fully qualified service name of this service.
 func (s *Service) FQSN() string {
 	components := []string{""}
@@ -206,8 +233,10 @@ func (m *Method) GetFormatComment() string {
 }
 
 const (
+	TagImport   = "@import"
 	TagTransmit = "@transmit"
 	TagTarget   = "@target"
+	TagTarPkg   = "@tarpkg"
 	TagId       = "@id"     // 上行请求协议对应的id
 	TagUpId     = "@upid"   // 上行请求协议对应的id
 	TagDownId   = "@downid" // 下行响应协议对应的id
@@ -241,6 +270,26 @@ func (m *Method) GetTargetSvrName() string {
 		}
 	}
 	return m.GetName()
+}
+
+func (m *Method) GetTargetSvrPackage() string {
+	if m.CanOutput() {
+		tarPkg := ""
+		for _, it := range m.CommentList {
+			if strings.Contains(it, TagTarPkg) {
+				tarPkg = it
+				break
+			}
+		}
+		if len(tarPkg) > 0 {
+			tar := strings.TrimSpace(strings.TrimPrefix(tarPkg, TagTarPkg))
+			tar = strings.TrimSpace(strings.Split(tar, " ")[0])
+			if len(tar) > 0 {
+				return tar + "."
+			}
+		}
+	}
+	return ""
 }
 
 // FQMN returns a fully qualified rpc method name of this method.
