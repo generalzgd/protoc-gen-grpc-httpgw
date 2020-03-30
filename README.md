@@ -7,7 +7,7 @@
 ```shell
 # 生成文件
 go build -o $GOPATH/bin/protoc-gen-grpc-httpgw
-// or
+# or 
 go install
 ```
 
@@ -16,6 +16,7 @@ go install
 ```shell
 # import_prefix: 导入包的前缀，默认空
 # import_path: 导入包的指定目录，默认空（即要导入的包都在同一级目录里）
+# paths: 两个选项，import 和 source_relative 。默认为 import ，代表按照生成的 go 代码的包的全路径去创建目录层级，source_relative 代表按照 proto 源文件的目录层级去创建 go 代码的目录层级，如果目录已存在则不用创建。
 # file: 指定文件，默认空（由protoc传入），对应的文件要对应CodeGeneratorRequest结构
 ```
 
@@ -29,7 +30,7 @@ protoc -Iproto --grpc-httpgw_out=logtostderr=true:./goproto ./proto/imgate.proto
 # 对应生成 xxx.pb.httpgw.go
 ```
 
-## Schema例子
+## Schema
 
 ```protobuf
 // 后端服务 authorize.proto
@@ -46,10 +47,14 @@ service Im {
 
 // 网关 imgate.proto
 // 定义一个grpc tcp/ws网关
+// @import hutte.zhanqi.tv/go/grpc-proto/goproto/auth:3 需要额外增加的包,1tcp需要加,2http需要加,3都要加
 service ImGate {
-	// 登录注释
-	// @transmit
-	// @target Authorize
+    // 登录注释
+    // @transmit
+    // @tarpkg auth 所在目录
+    // @target Authorize
+    // @upid 0 对应请求协议的cmdid(http代理不需要cmdid映射)
+    // @downid 0 对应响应协议的cmdid
     rpc Login (ImLoginRequest) returns (ImLoginReply) {
         option (google.api.http) = {
             post: "/v1/imgate/login"
@@ -59,7 +64,10 @@ service ImGate {
     
     // 已读
     // @transmit
+    // @tarpkg imgw 所在目录
     // @target Im
+    // @upid 0 对应请求协议的cmdid(http代理不需要cmdid映射)
+    // @downid 0 对应响应协议的cmdid
     rpc Read(ImReadRequest) returns (ImReadReply) {
         option (google.api.http) = {
             post: "/v1/imgate/read"
