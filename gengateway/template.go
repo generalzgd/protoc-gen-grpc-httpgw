@@ -531,7 +531,7 @@ func Register{{$svc.GetName}}{{$.RegisterFuncSuffix}}Client(
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		closeFunc()
+		defer closeFunc()
 
 		client := {{$m.GetTargetSvrPackage}}New{{$m.GetTargetSvrName}}Client(conn)
 
