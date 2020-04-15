@@ -225,7 +225,6 @@ package {{.GoPkg.Name}}
 import (
 	{{range $i := .Imports}}{{if $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
 
-	grpcpool "github.com/processout/grpc-go-pool"
 	{{range $i := .Imports}}{{if not $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
 
 	{{range $i := .AdditionImports}}
@@ -475,22 +474,18 @@ func Register{{$svc.GetName}}{{$.RegisterFuncSuffix}}Client(
 	mux *runtime.ServeMux, 
 	opts []grpc.DialOption, 
 	getEndpoint func(string)string, 
-	getClientConn func(string)(*grpcpool.ClientConn, error), 
+	getClientConn func(string) (*grpc.ClientConn, func(), error),
 	beginHandler func(string, *http.Request) (int, bool), 
 	doneHandler func(string, proto.Message, http.ResponseWriter, *http.Request), 
 	qpsHandler func(time.Duration)) error {
 
 	makeConn := func(meth string) (*grpc.ClientConn, error, func()) {
 		if getClientConn != nil {
-			conn, err := getClientConn(meth)
-			if err != nil {
-				return nil, err, func(){}
-			}
-			return conn.ClientConn, nil, func(){conn.Close()}
-		} 
+			return getClientConn(meth)
+		}
 		addr := getEndpoint(meth)
 		conn, err := grpc.Dial(addr, opts...)
-		return conn, err, func(){conn.Close()}
+		return conn, func() { conn.Close() }, err
 	}
 
 	{{range $m := $svc.Methods}}
@@ -526,7 +521,7 @@ func Register{{$svc.GetName}}{{$.RegisterFuncSuffix}}Client(
 			return
 		}
 		
-		conn, err, closeFunc := makeConn(meth)
+		conn, closeFunc, err := makeConn(meth)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
