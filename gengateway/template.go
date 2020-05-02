@@ -479,7 +479,7 @@ func Register{{$svc.GetName}}{{$.RegisterFuncSuffix}}Client(
 	doneHandler func(string, proto.Message, http.ResponseWriter, *http.Request), 
 	qpsHandler func(time.Duration)) error {
 
-	makeConn := func(meth string) (*grpc.ClientConn, error, func()) {
+	makeConn := func(meth string) (*grpc.ClientConn, func(), error) {
 		if getClientConn != nil {
 			return getClientConn(meth)
 		}
